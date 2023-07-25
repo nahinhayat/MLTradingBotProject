@@ -29,7 +29,7 @@ st.markdown("## Find out which stock is best for your investment")
 #get ticker imput from user
 ticker_input = st.text_input("Enter the ticker for your stock of choice")
 
-#after ticker is entered by user run the algo
+#after ticker is entered by user run the algo and forecast model
 if ticker_input.strip():
     #import stock close price
         today = datetime.now()
@@ -38,8 +38,8 @@ if ticker_input.strip():
         asset_df = starter_ticker.history(period="1d", start= start_day, end=today).drop(columns=["Open", "High","Low","Volume"])
         asset_df.index.names = ["timestamp"]
     #create columns for SMA windows
-        short_window = 3
-        long_window = 50
+        short_window = 1
+        long_window = 9
         asset_df["SMA_Fast"] = asset_df['Close'].rolling(window=short_window).mean()
         asset_df["SMA_Slow"] = asset_df['Close'].rolling(window=long_window).mean()
     #create column to hold trading signal

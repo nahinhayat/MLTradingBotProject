@@ -28,7 +28,7 @@ if ticker_input.strip():
         asset_df["Actual Returns"] = asset_df["Close"].pct_change()
 
     #create columns for SMA_fast and SMA_slow
-        short_window = 4
+        short_window = 50
         long_window = 100
         asset_df["SMA_Fast"] = asset_df['Close'].rolling(window=short_window).mean()
         asset_df["SMA_Slow"] = asset_df['Close'].rolling(window=long_window).mean()
@@ -71,3 +71,4 @@ if ticker_input.strip():
 if ticker_input.strip():
     if st.button("Display the accuracy of the trading algo with this Stock"):
         st.write((accuracy * 100))
+        
