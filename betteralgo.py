@@ -19,9 +19,11 @@ hv.extension('bokeh', logo=False)
 from bokeh.plotting import figure
 from bokeh.io import show
 from bokeh.models import ColumnDataSource
+from prophet import Prophet
+import datetime as dt
 
 st.markdown("# The Ultimate Trading Tool")
-st.markdown("## Find out which stock is best for your investment and when to buy/sell ")
+st.markdown("## Find out which stock is best for your investment")
 
 
 #get ticker imput from user
@@ -36,8 +38,8 @@ if ticker_input.strip():
         asset_df = starter_ticker.history(period="1d", start= start_day, end=today).drop(columns=["Open", "High","Low","Volume"])
         asset_df.index.names = ["timestamp"]
     #create columns for SMA windows
-        short_window = 4
-        long_window = 30
+        short_window = 3
+        long_window = 50
         asset_df["SMA_Fast"] = asset_df['Close'].rolling(window=short_window).mean()
         asset_df["SMA_Slow"] = asset_df['Close'].rolling(window=long_window).mean()
     #create column to hold trading signal
@@ -58,11 +60,11 @@ if ticker_input.strip():
         asset_df["Portfolio Daily Returns"] = asset_df["Portfolio Total"].pct_change()
         asset_df["Portfolio Cumulative Returns"] = (1+ asset_df["Portfolio Daily Returns"]).cumprod()-1
     #calc annualized return
-        annualized_return = asset_df['Portfolio Daily Returns'].mean() * 252
+        annualized_return = round((asset_df['Portfolio Daily Returns'].mean() * 252), 4)
     #calc cumulative returns
-        cumulative_return = asset_df["Portfolio Cumulative Returns"][-1]
+        cumulative_return = round((asset_df["Portfolio Cumulative Returns"][-1]), 4)
     #calc annual volatility
-        annual_vol = asset_df['Portfolio Daily Returns'].std() * np.sqrt(252)
+        annual_vol = round(((asset_df['Portfolio Daily Returns'].std() * np.sqrt(252))), 4)
     # Visualize the value of the total portfolio
         total_portfolio_value = asset_df[['Portfolio Total']].hvplot(
             line_color='lightgray',
@@ -70,6 +72,45 @@ if ticker_input.strip():
             xlabel='Date',
             width=1000,
             height=400)
+    #build model to forecast future prices of stock
+    #create time series dataframe
+        ts_df = starter_ticker.history(period="1d", start= start_day, end=today).loc[:, ["Close"]]
+        ts_df.index = ts_df.index.strftime("%Y-%m-%d %H:%M:%S")
+        ts_reset_df = ts_df.reset_index()
+        ts_reset_df.columns = ["ds","y"]
+    #start Prophet forecast
+        m = Prophet()
+        m.fit(ts_reset_df)
+        future = m.make_future_dataframe(periods = 365, freq = "D")
+        forecast = m.predict(future)
+        forecast = forecast.loc[:, ["ds","yhat"]]
+    #create dataframe to find next signal and entryexit points
+        buy_or_sell_df = forecast
+        buy_or_sell_df.columns = ["Date","Close"]
+    #create columns for needed data
+        buy_or_sell_df["SMA_Fast"] = buy_or_sell_df['Close'].rolling(window=short_window).mean()
+        buy_or_sell_df["SMA_Slow"] = buy_or_sell_df['Close'].rolling(window=long_window).mean()
+        buy_or_sell_df["Signal"] = 0.0
+        buy_or_sell_df["Signal"][short_window:] = np.where(
+        buy_or_sell_df["SMA_Fast"][short_window:] > buy_or_sell_df["SMA_Slow"][short_window:], 1.0, 0.0
+        )
+        buy_or_sell_df["Entry/Exit"] = buy_or_sell_df["Signal"].diff()
+        buy_or_sell_df.dropna()
+        buy_or_sell_df.set_index('Date', inplace = True)
+    #create dataframe with only future values
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        next_point_df = buy_or_sell_df.loc[current_date:]
+    #find next point which indicated to buy
+        search_value_buy = 1.0
+        next_point_buy = round(next_point_df.loc[next_point_df["Entry/Exit"] == search_value_buy, "Close"].values[0], 2)
+        next_point_buy_date = next_point_df.loc[next_point_df["Entry/Exit"] == search_value_buy].index[0]
+    #find next point to sell
+        search_value_sell = -1.0
+        next_point_sell = round(next_point_df.loc[next_point_df["Entry/Exit"] == search_value_sell, "Close"].values[0], 2)
+        next_point_sell_date = next_point_df.loc[next_point_df["Entry/Exit"] == search_value_sell].index[0]
+    #display info 
+        st.write(f"If the trading alogirthm we have created was used with {ticker_input} for the last three years, there would be cumulative returns yielding {cumulative_return *100}%, an annualized return of {annualized_return *100}%, with a volatility of {round((annual_vol *100),2)}%.")
+        
 
 #display button to show visualization of sim portfolio
 if ticker_input.strip():
@@ -77,29 +118,18 @@ if ticker_input.strip():
         st.write(hv.render(total_portfolio_value, backend='bokeh'))
         
 
-#display button for annualized return after ticker input
-if ticker_input.strip():
-    if st.button("Display annualized return for last three years"):
-        st.write((annualized_return *100))
-        
-#display button for cumulative returns after ticker input
-if ticker_input.strip():
-    if st.button("Display cumulative returns for last three years"):
-        st.write((cumulative_return *100))
-        
-#display button for annual volatility after ticker input
-if ticker_input.strip():
-    if st.button("Display annual volatility for last three years"):
-        st.write((annual_vol *100))
-
+#create input for investment amount        
 if ticker_input.strip():
     investment_input = st.text_input("How much would you like to invest?")
     if investment_input.strip():
         investment_amount_float = float(investment_input)
-        if st.button("Calculate your average possible returns for the next year"):
-            st.write((annualized_return *investment_amount_float))
-        if st.button("Calculate the maximum possible returns") :
-            st.write((annualized_return+annual_vol)*investment_amount_float)
-        if st.button("Calculate maximum possible losses") :
-            st.write((annualized_return-annual_vol)*investment_amount_float)
+        st.write(f"The average possible returns for the next year would be \\${round((annualized_return*investment_amount_float), 2)}. With possible maximum returns as high as \\${round(((annualized_return+annual_vol)*investment_amount_float), 2)} but possible maximum losses as low as ${round(((annualized_return-annual_vol)*investment_amount_float), 2)}")
+        if investment_input.strip():
+            if st.button("Find next price for entry"):
+                st.write(f"When the price for {ticker_input} hits ${next_point_buy}, this will be the time to buy. This should happen around {next_point_buy_date}")
+        if investment_input.strip():
+            if st.button("Find next price for exit"):
+                st.write(f"When the price for {ticker_input} hits ${next_point_sell}, this will be the time to sell. This should happen around {next_point_sell_date}")
+    
+            
             
