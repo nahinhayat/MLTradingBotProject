@@ -22,8 +22,9 @@ from bokeh.models import ColumnDataSource
 from prophet import Prophet
 import datetime as dt
 
-st.markdown("# The Ultimate Trading Tool")
-st.markdown("## Find out which stock is best for your investment")
+st.markdown("# Your Personal Trader")
+st.markdown("## The ultimate trading tool for your investment")
+st.markdown("### Use our trading algorithm to make the most calculated trades on the asset of your choice")
 
 
 #get ticker imput from user
@@ -38,8 +39,8 @@ if ticker_input.strip():
         asset_df = starter_ticker.history(period="1d", start= start_day, end=today).drop(columns=["Open", "High","Low","Volume"])
         asset_df.index.names = ["timestamp"]
     #create columns for SMA windows
-        short_window = 1
-        long_window = 9
+        short_window = 5
+        long_window = 20
         asset_df["SMA_Fast"] = asset_df['Close'].rolling(window=short_window).mean()
         asset_df["SMA_Slow"] = asset_df['Close'].rolling(window=long_window).mean()
     #create column to hold trading signal
@@ -109,7 +110,7 @@ if ticker_input.strip():
         next_point_sell = round(next_point_df.loc[next_point_df["Entry/Exit"] == search_value_sell, "Close"].values[0], 2)
         next_point_sell_date = next_point_df.loc[next_point_df["Entry/Exit"] == search_value_sell].index[0]
     #display info 
-        st.write(f"If the trading alogirthm we have created was used with {ticker_input} for the last three years, there would be cumulative returns yielding {cumulative_return *100}%, an annualized return of {annualized_return *100}%, with a volatility of {round((annual_vol *100),2)}%.")
+        st.write(f"If the trading alogirthm we have created was used with {ticker_input} for the last three years, there would be cumulative returns yielding {round((cumulative_return *100),2)}%, an annualized return of {round((annualized_return *100),2)}%, with a volatility of {round((annual_vol *100),2)}%.")
         
 
 #display button to show visualization of sim portfolio
