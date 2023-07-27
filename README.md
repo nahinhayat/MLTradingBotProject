@@ -1,10 +1,10 @@
 Your Personal Trader Project
 
-Description of code:
+Description of Project:
 
 This project is a web application run through Streamlit which allows users to use the stock or crypto or their choice with a trading algorithm I have created. They can see how the stock they choose has performed historically with the strategy integrated in the algorithm, they are given evaluation metrics such as cumulative returns, annualized returns, and annual volatility. Then they are also given the option to input an amount if they are interested in investing and find the possible returns for the next year using the algorithm.  If the user is interested in using the strategy after seeing this information, I have a model which can forecast the next time to buy or if they are already using the strategy, when to sell.
 
-Details:
+Details of Code:
 
 The libraries and functions that need to be imported are showcased here:
 
