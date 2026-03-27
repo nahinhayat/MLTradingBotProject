@@ -25,7 +25,7 @@ st.markdown("### Use our trading algorithm to make the most calculated trades on
 @st.cache_data
 def fetch_data(ticker, start, end):
     t = yf.Ticker(ticker)
-    df = t.history(period="1d", start=start, end=end).drop(columns=["Open", "High", "Low", "Volume"])
+    df = t.history(start=start, end=end).drop(columns=["Open", "High", "Low", "Volume"])
     df.index.names = ["timestamp"]
     return df
 
@@ -33,7 +33,7 @@ def fetch_data(ticker, start, end):
 @st.cache_data
 def run_prophet(ticker, start, end):
     t = yf.Ticker(ticker)
-    ts_df = t.history(period="1d", start=start, end=end).loc[:, ["Close"]]
+    ts_df = t.history(start=start, end=end).loc[:, ["Close"]]
     ts_df.index = ts_df.index.strftime("%Y-%m-%d %H:%M:%S")
     ts_reset_df = ts_df.reset_index()
     ts_reset_df.columns = ["ds", "y"]
